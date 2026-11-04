@@ -103,6 +103,9 @@ Ejecuta dos experimentos sobre `127.0.0.1` (promediando 150 conexiones completas
 * **Gráfico 1 (Impacto en Red - Bytes Totales):**
   Visualiza la proporción de volumen de datos respecto a X25519. Demuestra que ML-KEM-768 multiplica por **35.5x** el volumen de datos criptográficos del intercambio, mientras que ML-KEM-1024 lo multiplica por **49.0x**.
 
+![Benchmark 1](benchmark1.jpeg) 
+*Figura 1: ejemplo de benchmark sobre una PC con Ryzen 3 2200g y 24GB de RAM DDR4*
+
 * **Tabla 2 (Rendimiento de CPU y Memoria):**
   * `Iteraciones (N)`: Muestra estadística ejecutada por el motor de benchmark.
   * `Latencia (us/op)`: Tiempo de CPU por operación en microsegundos ($1\text{ ms} = 1.000\ \mu\text{s}$).
@@ -116,6 +119,10 @@ Ejecuta dos experimentos sobre `127.0.0.1` (promediando 150 conexiones completas
   Elimina a `FFDH-2048` del eje para comparar mano a mano `X25519`, `ML-KEM-768` y `ML-KEM-1024`. Permite observar:
   1. Que las operaciones de reticulados se ejecutan en decenas de microsegundos, en el mismo orden de magnitud que las curvas elípticas.
   2. Que en ML-KEM la fase `3. Receptor (Decaps+FO)` es sistemáticamente más costosa que `2. Emisor (Encapsulate)`. Esto refleja el costo computacional de la **Transformación Fujisaki-Okamoto (FO)**: para alcanzar seguridad contra ataques activos de texto cifrado escogido (**IND-CCA2**), el receptor debe re-ejecutar internamente el algoritmo de encapsulación sobre el mensaje descifrado y verificar que la cápsula generada coincida bit a bit con la recibida.
+
+![Benchmark 2](benchmark2.jpeg)
+
+*Figura 2: ejemplo de benchmark sobre una PC con Ryzen 3 2200g y 24GB de RAM DDR4*
 
 ---
 
@@ -131,6 +138,9 @@ Ejecuta dos experimentos sobre `127.0.0.1` (promediando 150 conexiones completas
   Evidencia qué ocurre en un protocolo de producción real cuando a las primitivas criptográficas se les suman las estructuras de control TLS:
   * **En TLS 1.3 Clásico (`X25519`):** El `ClientHello` mide **~290 bytes** (1 segmento TCP) y la respuesta del servidor con el certificado X.509 mide **~750 bytes** (1 segmento TCP).
   * **En TLS 1.3 Híbrido (`X25519MLKEM768`):** La extensión `key_share` transporta concatenadas las claves públicas de X25519 ($32\text{ B}$) y ML-KEM-768 ($1.184\text{ B}$). Sumado a las cabeceras y extensiones TLS, el `ClientHello` asciende a **~1.474 bytes**, cruzando el umbral de 1.460 bytes del MSS y dividiéndose en **2 segmentos TCP**. Del mismo modo, el vuelo del servidor incorpora la cápsula híbrida ($1.120\text{ B}$) más el certificado, ascendiendo a **~1.840 bytes** y dividiéndose también en **2 segmentos TCP**.
+
+![Benchmark red](benchmark_red.jpeg)
+*Figura 3: ejemplo de benchmark de red sobre una PC con Ryzen 3 2200g y 24GB de RAM DDR4*
 
 ---
 

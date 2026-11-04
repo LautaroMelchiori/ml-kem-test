@@ -155,8 +155,26 @@ Existe el preconcepto de que la criptografía post-cuántica es computacionalmen
 
 ### 2. El cuello de botella se traslada de la CPU a la Capa de Transporte
 El costo real de adoptar ML-KEM radica en la amplificación de ancho de banda durante el establecimiento de sesión (*Wire Overhead*). En TLS 1.3, pasar de `X25519` a `X25519MLKEM768` más que triplica el tamaño total del handshake (de ~1.1 KB a ~3.4 KB) y duplica la cantidad de segmentos TCP requeridos tanto para el `ClientHello` como para la respuesta del servidor.
-
 ### 3. Impacto de la segmentación TCP en enlaces con pérdida de paquetes
 En una red local sin pérdidas (`loopback`), enviar 1 o 2 segmentos TCP añade menos de 50 microsegundos de diferencia. Sin embargo, en redes WAN, enlaces móviles o satelitales con pérdida de paquetes (*packet loss* $\ge 1\%$):
 * Para que el servidor pueda procesar el `ClientHello`, necesita recibir **ambos segmentos TCP**.
-* Si se pierde uno solo de los dos segmentos, se produce bloqueo de cabecera (*Head-of-Line Blocking*): el handshake queda detenido hasta que expira el temporizador de retransmisión TCP (*RTO - Retransmission Timeout*), degradando severamente la latencia de cola (*tail latency*, percentil
+* Si se pierde uno solo de los dos segmentos, se produce bloqueo de cabecera (*Head-of-Line Blocking*): el handshake queda detenido hasta que expira el temporizador de retransmisión TCP (*RTO - Retransmission Timeout*), degradando severamente la latencia de cola (*tail latency*, percentil 99).
+* Si la cadena de certificados X.509 del servidor incluye múltiples certificados intermedios firmados a su vez con algoritmos post-cuánticos (como ML-DSA / Dilithium, cuyas firmas superan los 2.400 a 4.600 bytes), el vuelo del servidor puede superar la ventana inicial de congestión de TCP (**IW10**, ~14.6 KB), añadiendo un viaje de ida y vuelta (*RTT*) completo adicional antes de poder transmitir el primer byte de aplicación.
+
+### 4. Justificación del despliegue mediante Esquemas Híbridos (`X25519MLKEM768`)
+En ingeniería de seguridad de producción (Cloudflare, Google Chrome, AWS, OpenSSH), ML-KEM no se despliega de forma aislada, sino combinado con ECDH clásico mediante una función de derivación de claves:
+$$K_{\text{sesión}} = \text{KDF}(K_{\text{X25519}} \parallel K_{\text{ML-KEM-768}})$$
+Este diseño responde al principio de **defensa en profundidad**:
+* Si en la próxima década se construye una computadora cuántica criptográficamente relevante que quiebre `X25519` mediante el algoritmo de Shor, la confidencialidad del tráfico histórico capturado (*Store Now, Decrypt Later*) se mantiene intacta gracias a `ML-KEM-768`.
+* Si se descubriera un avance criptoanalítico matemático clásico contra la estructura algebraica de los reticulados modulares (*Module-LWE*), la conexión sigue siendo tan segura como el estándar actual gracias a `X25519`.
+* El costo adicional de concatenar `X25519` a `ML-KEM-768` es despreciable: apenas **32 bytes** extra en red y **~15 microsegundos** de CPU.
+
+---
+
+## 6. Referencias Normativas
+
+* **NIST FIPS 203 (Agosto 2024):** *Module-Lattice-Based Key-Encapsulation Mechanism Standard*. National Institute of Standards and Technology.
+* **RFC 3526:** *More Modular Exponential (MODP) Diffie-Hellman groups for Internet Key Exchange (IKE)*. IETF.
+* **RFC 7748:** *Elliptic Curves for Security (Curve25519 and Curve448)*. IETF.
+* **RFC 8446:** *The Transport Layer Security (TLS) Protocol Version 1.3*. IETF.
+* **IETF Draft (draft-ietf-tls-ecdhe-mlkem):** *Hybrid key exchange in TLS 1.3 (X25519MLKEM768)*. IETF TLS Working Group.
